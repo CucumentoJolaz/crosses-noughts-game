@@ -3,98 +3,6 @@ from abc import ABC, abstractmethod
 from random import choice
 from dataclasses import dataclass
 
-CROSS = "Cross"
-NOUGHT = "Nought"
-EMPTY = "Empty"
-
-WinCheckPattern = [(0, 1, 2), (3, 4, 5), (6, 7, 8),
-                   (0, 3, 6), (1, 4, 7), (2, 5, 8),
-                   (0, 4, 8), (2, 4, 6)]
-
-@dataclass
-class CS:  # CANVAS SIZE, (X, Y)
-    X = 800
-    Y = 800
-
-
-CellCoordinates = [[[0, 0], [1 / 3, 1 / 3]],
-                   [[1 / 3, 0], [2 / 3, 1 / 3]],
-                   [[2 / 3, 0], [1, 1 / 3]],
-                   [[0, 1 / 3], [1 / 3, 2 / 3]],
-                   [[1 / 3, 1 / 3], [2 / 3, 2 / 3]],
-                   [[2 / 3, 1 / 3], [1, 2 / 3]],
-                   [[0, 2 / 3], [1 / 3, 1]],
-                   [[1 / 3, 2 / 3], [2 / 3, 1]],
-                   [[2 / 3, 2 / 3], [1, 1]],
-                   ]
-
-for i in range(len(CellCoordinates)):
-    CellCoordinates[i][0][0] *= CS.X
-    CellCoordinates[i][1][0] *= CS.X
-    CellCoordinates[i][0][1] *= CS.Y
-    CellCoordinates[i][1][1] *= CS.Y
-
-
-class Cell:
-
-    def __init__(self, CoordStart, CoordEnd, canvas: tk.Canvas):
-        self.CellType = Empty()
-        self.canvas = canvas
-        self.Xstart = CoordStart[0]
-        self.Ystart = CoordStart[1]
-        self.Xend = CoordEnd[0]
-        self.Yend = CoordEnd[1]
-
-
-class Shape(ABC):
-    @abstractmethod
-    def Draw(self):
-        pass
-
-
-class Empty(Shape):
-    name = EMPTY
-
-    def Draw(self):
-        print("There is no shape here")
-
-
-class Cross(Shape):
-    name = CROSS
-
-    def __init__(self, canvas: tk.Canvas, cell: Cell):
-        self.canvas = canvas
-        self.cell = cell
-
-    def Draw(self):
-        QuarterX = (self.cell.Xend - self.cell.Xstart) / 4
-        QuarterY = (self.cell.Yend - self.cell.Ystart) / 4
-        self.canvas.create_line(self.cell.Xstart + QuarterX, self.cell.Ystart + QuarterY, self.cell.Xstart + 3 * QuarterX,
-                           self.cell.Ystart + 3 * QuarterY, width=3)
-        self.canvas.create_line(self.cell.Xstart + 3 * QuarterX, self.cell.Ystart + QuarterY, self.cell.Xstart + QuarterX,
-                           self.cell.Ystart + 3 * QuarterY, width=3)
-
-class Nought(Shape):
-    name = NOUGHT
-
-    def __init__(self, canvas: tk.Canvas, cell: Cell):
-        self.canvas = canvas
-        self.cell = cell
-
-
-    def Draw(self):
-        QuarterX = (self.cell.Xend - self.cell.Xstart) / 4
-        QuarterY = (self.cell.Yend - self.cell.Ystart) / 4
-        self.canvas.create_oval(self.cell.Xstart + QuarterX, self.cell.Ystart + QuarterY, self.cell.Xstart + 3 * QuarterX,
-                           self.cell.Ystart + 3 * QuarterY, width=3)
-
-class Grid:
-    CellList: []
-import tkinter as tk
-from abc import ABC, abstractmethod
-from random import choice
-from dataclasses import dataclass
-
 #константы активно используемые в коде
 CROSS = "Cross"
 NOUGHT = "Nought"
@@ -377,3 +285,4 @@ computer = Computer(app, NOUGHT)
 gamer = Gamer(app, CROSS, computerToPlay=computer)
 
 app.mainloop()
+
