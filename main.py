@@ -3,15 +3,16 @@ from abc import ABC, abstractmethod
 from random import choice
 from dataclasses import dataclass
 
-#константы активно используемые в коде
+# константы активно используемые в коде
 CROSS = "Cross"
 NOUGHT = "Nought"
 EMPTY = "Empty"
-
-#наборы цифр для проверки ячеек на наличие выигрышной комбинации
+END = "end"
+# наборы цифр для проверки ячеек на наличие выигрышной комбинации
 WinCheckPattern = [(0, 1, 2), (3, 4, 5), (6, 7, 8),
                    (0, 3, 6), (1, 4, 7), (2, 5, 8),
                    (0, 4, 8), (2, 4, 6)]
+
 
 # Размары холста
 @dataclass
@@ -20,7 +21,7 @@ class CS:  # CANVAS SIZE, (X, Y)
     Y = 800
 
 
-#координаты ячеек в холсте. Используются для обсчёта позиции курсора игрока
+# координаты ячеек в холсте. Используются для обсчёта позиции курсора игрока
 CellCoordinates = [[[0, 0], [1 / 3, 1 / 3]],
                    [[1 / 3, 0], [2 / 3, 1 / 3]],
                    [[2 / 3, 0], [1, 1 / 3]],
@@ -39,8 +40,8 @@ for i in range(len(CellCoordinates)):
     CellCoordinates[i][1][1] *= CS.Y
 
 
-#класс ячейки, имеет аттрибук - характеристику ячейки, пустая, крестик или нолик. (4 класса ниже.)
-#имеет собственные координаты.
+# класс ячейки, имеет аттрибук - характеристику ячейки, пустая, крестик или нолик. (4 класса ниже.)
+# имеет собственные координаты.
 class Cell:
 
     def __init__(self, CoordStart, CoordEnd, canvas: tk.Canvas):
@@ -68,8 +69,8 @@ class Empty(Shape):
 class Cross(Shape):
     name = CROSS
 
-    def __init__(self, canvas: tk.Canvas, cell: Cell):
-        self.canvas = canvas
+    def __init__(self, cell: Cell):
+        self.canvas = cell.canvas
         self.cell = cell
 
     def Draw(self):
@@ -86,8 +87,8 @@ class Cross(Shape):
 class Nought(Shape):
     name = NOUGHT
 
-    def __init__(self, canvas: tk.Canvas, cell: Cell):
-        self.canvas = canvas
+    def __init__(self, cell: Cell):
+        self.canvas = cell.canvas
         self.cell = cell
 
     def Draw(self):
@@ -98,15 +99,12 @@ class Nought(Shape):
                                 self.cell.Ystart + 3 * QuarterY, width=3)
 
 
-# класс сетки. Имеет массив с классами ячеек. 
+# класс сетки. Имеет массив с классами ячеек.
 class Grid:
     CellList: []
 
     def __init__(self, canvas: tk.Canvas):
         self.CellList = [Cell(CellCoordinates[i][0], CellCoordinates[i][1], canvas) for i in range(9)]
-
-    def WinningCondition(self):
-        pass
 
 
 # основной класс приложение. В нём осуществляется инициализация холста, сетки, ячеек, игроков.
@@ -124,7 +122,7 @@ class Application(tk.Frame):
     def CreateWidgets(self):
         self.playerCross = tk.Button(self)
         self.playerCross["text"] = "Играть за крестики"
-        self.playerCross["command"] = self.PlayersInit
+        self.playerCross["command"] = lambda: self.PlayersInit(CROSS)
         self.playerCross.pack(side="left")
 
         self.quit = tk.Button(self, text="QUIT", fg="red",
@@ -133,18 +131,18 @@ class Application(tk.Frame):
 
         self.playerNoughts = tk.Button(self)
         self.playerNoughts["text"] = "Играть за нолики"
-        self.playerNoughts["command"] = self.PlayersInit
+        self.playerNoughts["command"] = lambda: self.PlayersInit(NOUGHT)
         self.playerNoughts.pack(side="right")
 
-        self.infoField = tk.Entry(width=50)
+        self.infoField = tk.Entry(width=int(CS.X / 8))
         self.infoField.pack(side="top")
-        self.infoField.insert(0, 'Выберите за чем будете играть')
+        self.infoField.insert(0, 'Выберите за какую сторону вы будете играть')
 
         self.CanvasInit()
 
     def CanvasInit(self):
         if 'canvas' not in self.__dict__:
-            self.canvas = tk.Canvas(root, width=CS.X, height=CS.Y, bg='white')
+            self.canvas = tk.Canvas(self.master, width=CS.X, height=CS.Y, bg='white')
         self.canvas.create_line(1 / 3 * CS.X, 0, 1 / 3 * CS.X, CS.Y, width=5)
         self.canvas.create_line(2 / 3 * CS.X, 0, 2 / 3 * CS.X, CS.Y, width=5)
         self.canvas.create_line(0, 1 / 3 * CS.Y, CS.X, 1 / 3 * CS.Y, width=5)
@@ -165,19 +163,36 @@ class Application(tk.Frame):
         self.playerNoughts['state'] = "active"
 
     def ReInit(self):
-        self.EnableStartButtons()
+
+        self.whoShouldMove = CROSS
         self.canvas.delete('all')
         self.CanvasInit()
         self.grid = Grid(self.canvas)
 
-    def PlayersInit(self):
+    def PlayersInit(self, CrossOrNought: str):
+
+        # Инициализация игрока и компьютера в соответствии с выбором игрока
+        if self.whoShouldMove == END:
+            self.ReInit()
+        if CrossOrNought == CROSS:
+            computer = Computer(self, NOUGHT)
+            gamer = Gamer(self, CROSS, computerToPlay=computer)
+            self.infoField.delete('0', tk.END)
+            self.infoField.insert(0, 'Вы играете крестиками.')
+        elif CrossOrNought == NOUGHT:
+            computer = Computer(self, CROSS)
+            gamer = Gamer(self, NOUGHT, computerToPlay=computer)
+            self.infoField.delete('0', tk.END)
+            self.infoField.insert(0, 'Вы играете ноликами')
+            computer.Move()
+
         self.DisableStartButtons()
 
     def CompMoveDelay(self, delay: int):
         self.master.after(delay)
 
 
-#классы - игроки. используются для реализации непосредственного участия в игре.
+# классы - игроки. используются для реализации непосредственного участия в игре.
 class Player(ABC):
 
     def GetFreeCells(self):
@@ -192,22 +207,28 @@ class Player(ABC):
         CeLi = self.app.grid.CellList  # Cell List Short
 
         for pat in WinCheckPattern:
-
             if CeLi[pat[0]].CellType.name == CeLi[pat[1]].CellType.name == CeLi[pat[2]].CellType.name:
-
                 if CeLi[pat[0]].CellType.name == CROSS:
                     self.app.infoField.delete('0', tk.END)
-                    self.app.infoField.insert(0, 'Победитель - крестики')
+                    self.app.infoField.insert(0, 'Победитель - крестики! Для повторной игры выберите за какую сторону '
+                                                 'вы будете играть.')
                     self.app.whoShouldMove = 'end'
+                    self.app.EnableStartButtons()
+                    return True
                 elif CeLi[pat[0]].CellType.name == NOUGHT:
                     self.app.infoField.delete('0', tk.END)
-                    self.app.infoField.insert(0, 'Победитель - нолики')
+                    self.app.infoField.insert(0, 'Победитель - нолики! Для повторной игры выберите за какую сторону '
+                                                 'вы будете играть.')
                     self.app.whoShouldMove = 'end'
+                    self.app.EnableStartButtons()
+                    return True
 
         if not self.GetFreeCells():
             self.app.infoField.delete('0', tk.END)
-            self.app.infoField.insert(0, 'Ничья')
+            self.app.infoField.insert(0, 'Ничья! Для повторной игры выберите за какую сторону вы будете играть.')
             self.app.whoShouldMove = 'end'
+            self.app.EnableStartButtons()
+            return True
 
         return None
 
@@ -230,10 +251,10 @@ class Computer(Player):
         if freeCells:
             cell = choice(freeCells)
             if self.typeOfShape == CROSS:
-                cell.CellType = Cross(cell.canvas, cell)
+                cell.CellType = Cross(cell)
                 self.app.whoShouldMove = NOUGHT
             elif self.typeOfShape == NOUGHT:
-                cell.CellType = Nought(cell.canvas, cell)
+                cell.CellType = Nought(cell)
                 self.app.whoShouldMove = CROSS
             cell.CellType.Draw()
         super().CheckWinningCondition()
@@ -260,15 +281,14 @@ class Gamer(Player):
             if self.app.whoShouldMove == self.typeOfShape:
                 if cell.CellType.name == "Empty":
                     if self.typeOfShape == CROSS:
-                        cell.CellType = Cross(cell.canvas, cell)
+                        cell.CellType = Cross(cell)
                         self.app.whoShouldMove = NOUGHT
                     elif self.typeOfShape == NOUGHT:
-                        cell.CellType = Nought(cell.canvas, cell)
+                        cell.CellType = Nought(cell)
                         self.app.whoShouldMove = CROSS
                     cell.CellType.Draw()
-                    super().CheckWinningCondition()
-                    self.computer.Move()
-                    print(event.x, event.y)
+                    if not super().CheckWinningCondition():
+                        self.computer.Move()
 
     # метод для поиска ячейки, по которой ткнул игрок. Поиск по координатам canvas
     def CheckCell(self, x, y):
@@ -279,10 +299,11 @@ class Gamer(Player):
                 return Cell
 
 
-root = tk.Tk()
-app = Application(master=root)
-computer = Computer(app, NOUGHT)
-gamer = Gamer(app, CROSS, computerToPlay=computer)
+def main():
+    root = tk.Tk()
+    app = Application(master=root)
+    app.mainloop()
 
-app.mainloop()
 
+if __name__ == '__main__':
+    main()
