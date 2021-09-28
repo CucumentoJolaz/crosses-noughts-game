@@ -8,6 +8,7 @@ CROSS = "Cross"
 NOUGHT = "Nought"
 EMPTY = "Empty"
 END = "end"
+DRAW = "Draw"
 # наборы цифр для проверки ячеек на наличие выигрышной комбинации
 WinCheckPattern = [(0, 1, 2), (3, 4, 5), (6, 7, 8),
                    (0, 3, 6), (1, 4, 7), (2, 5, 8),
@@ -76,12 +77,24 @@ class Cross(Shape):
     def Draw(self):
         QuarterX = (self.cell.Xend - self.cell.Xstart) / 4
         QuarterY = (self.cell.Yend - self.cell.Ystart) / 4
-        self.canvas.create_line(self.cell.Xstart + QuarterX, self.cell.Ystart + QuarterY,
-                                self.cell.Xstart + 3 * QuarterX,
-                                self.cell.Ystart + 3 * QuarterY, width=3)
-        self.canvas.create_line(self.cell.Xstart + 3 * QuarterX, self.cell.Ystart + QuarterY,
-                                self.cell.Xstart + QuarterX,
-                                self.cell.Ystart + 3 * QuarterY, width=3)
+        Line1CoordX = [i for i in
+                       range(int(self.cell.Xstart + QuarterX), int(self.cell.Xstart + 3 * QuarterX),
+                             int(2 * QuarterX / 100))]
+        Line1CoordY = [i for i in
+                       range(int(self.cell.Ystart + QuarterY), int(self.cell.Ystart + 3 * QuarterY),
+                             int(2 * QuarterY / 100))]
+        Line2CoordX = [i for i in
+                       range(int(self.cell.Xstart + 3 * QuarterX), int(self.cell.Xstart + QuarterX),
+                             -int(2 * QuarterX / 100))]
+        Line2CoordY = [i for i in
+                       range(int(self.cell.Ystart + QuarterY), int(self.cell.Ystart + 3 * QuarterY),
+                             int(2 * QuarterY / 100))]
+        # эти все усложнения просто задел под анимацию отрисовки крестиков
+        for i in range(len(Line1CoordY) - 1):
+            self.canvas.create_line(Line1CoordX[i], Line1CoordY[i], Line1CoordX[i + 1], Line1CoordY[i + 1], width=3)
+
+        for i in range(len(Line2CoordX) - 2):
+            self.canvas.create_line(Line2CoordX[i], Line2CoordY[i], Line2CoordX[i + 1], Line2CoordY[i + 1], width=3)
 
 
 class Nought(Shape):
@@ -177,19 +190,21 @@ class Application(tk.Frame):
         if CrossOrNought == CROSS:
             computer = Computer(self, NOUGHT)
             gamer = Gamer(self, CROSS, computerToPlay=computer)
-            self.infoField.delete('0', tk.END)
-            self.infoField.insert(0, 'Вы играете крестиками.')
+            self.InfoFieldUpdate('Вы играете крестиками.')
         elif CrossOrNought == NOUGHT:
             computer = Computer(self, CROSS)
             gamer = Gamer(self, NOUGHT, computerToPlay=computer)
-            self.infoField.delete('0', tk.END)
-            self.infoField.insert(0, 'Вы играете ноликами')
+            self.InfoFieldUpdate('Вы играете ноликами')
             computer.Move()
 
         self.DisableStartButtons()
 
-    def CompMoveDelay(self, delay: int):
+    def AppDelay(self, delay: int):
         self.master.after(delay)
+
+    def InfoFieldUpdate(self, message: str):
+        self.infoField.delete('0', tk.END)
+        self.infoField.insert(0, message)
 
 
 # классы - игроки. используются для реализации непосредственного участия в игре.
@@ -209,37 +224,37 @@ class Player(ABC):
         for pat in WinCheckPattern:
             if CeLi[pat[0]].CellType.name == CeLi[pat[1]].CellType.name == CeLi[pat[2]].CellType.name:
                 if CeLi[pat[0]].CellType.name == CROSS:
-                    self.app.infoField.delete('0', tk.END)
-                    self.app.infoField.insert(0, 'Победитель - крестики! Для повторной игры выберите за какую сторону '
-                                                 'вы будете играть.')
-                    self.app.whoShouldMove = 'end'
-                    self.app.EnableStartButtons()
+                    self.ProceedAfterWinningCondition(endState=CROSS)
                     return True
                 elif CeLi[pat[0]].CellType.name == NOUGHT:
-                    self.app.infoField.delete('0', tk.END)
-                    self.app.infoField.insert(0, 'Победитель - нолики! Для повторной игры выберите за какую сторону '
-                                                 'вы будете играть.')
-                    self.app.whoShouldMove = 'end'
-                    self.app.EnableStartButtons()
+                    self.ProceedAfterWinningCondition(endState=NOUGHT)
                     return True
 
         if not self.GetFreeCells():
-            self.app.infoField.delete('0', tk.END)
-            self.app.infoField.insert(0, 'Ничья! Для повторной игры выберите за какую сторону вы будете играть.')
-            self.app.whoShouldMove = 'end'
-            self.app.EnableStartButtons()
+            self.ProceedAfterWinningCondition(endState=DRAW)
             return True
 
         return None
 
-    # Метод для совершения хода в игре
+    def ProceedAfterWinningCondition(self, endState: str):
+        if endState == CROSS:
+            self.app.InfoFieldUpdate('Победитель - крестики! Для повторной игры выберите за какую сторону '
+                                     'вы будете играть.')
+        elif endState == NOUGHT:
+            self.app.InfoFieldUpdate('Победитель - нолики! Для повторной игры выберите за какую сторону '
+                                     'вы будете играть.')
+        elif endState == DRAW:
+            self.app.InfoFieldUpdate('Ничья! Для повторной игры выберите за какую сторону '
+                                     'вы будете играть.')
+        self.app.whoShouldMove = 'end'
+        self.app.EnableStartButtons()
 
 
 class Computer(Player):
 
     def __init__(self, app: Application, typeOfShape: str):
 
-        assert typeOfShape in (CROSS, NOUGHT), "Неправильный тип знака. Допустивы 'cross' и 'nought'"
+        assert typeOfShape in (CROSS, NOUGHT), "Неправильный тип знака. Допустимы константы CROSS и NOUGHT"
         self.typeOfShape = typeOfShape
         self.app = app
         self.canvas = self.app.canvas
@@ -264,7 +279,7 @@ class Gamer(Player):
 
     def __init__(self, app: Application, typeOfShape: str, computerToPlay: Computer):
 
-        assert typeOfShape in (CROSS, NOUGHT), "Неправильный тип знака. Допустивы 'cross' и 'nought'"
+        assert typeOfShape in (CROSS, NOUGHT), "Неправильный тип знака. Допустимы константы CROSS и NOUGHT"
         self.computer = computerToPlay
         self.typeOfShape = typeOfShape
         self.app = app
