@@ -88,3 +88,8 @@ class Application(tk.Frame):
         self.infoField.delete('0', tk.END)
         self.infoField.insert(0, message)
 
+    def WhoShouldMove(self):
+        return self.whoShouldMove
+
+    def ShouldMove(self, shape):
+        self.whoShouldMove = shape

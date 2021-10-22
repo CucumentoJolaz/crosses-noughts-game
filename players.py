@@ -68,10 +68,10 @@ class Computer(Player):
             cell = choice(freeCells)
             if self.typeOfShape == CROSS:
                 cell.CellType = Cross(cell)
-                self.app.whoShouldMove = NOUGHT
+                self.app.ShouldMove(NOUGHT)
             elif self.typeOfShape == NOUGHT:
                 cell.CellType = Nought(cell)
-                self.app.whoShouldMove = CROSS
+                self.app.ShouldMove(CROSS)
             cell.CellType.Draw()
         super().CheckWinningCondition()
 
